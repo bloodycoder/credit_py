@@ -1,3 +1,6 @@
+import colorama
+from colorama import init
+init(autoreset=True)
 class BeautiConsole():
     WHITE = 0
     RED = 1
