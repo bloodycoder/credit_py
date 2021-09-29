@@ -5,6 +5,7 @@ from log import CreditLog
 import datetime
 import functools
 import json
+from chinese_calendar import is_workday, is_holiday
 EXITCLIENT = 100
 WEEKCARD = 12
 WEEK = 7
@@ -12,6 +13,7 @@ NOLIMIT = -1
 MONTH = 30
 HALF_YEAR = 180
 YEAR = 365
+HOLIDAY_DISCOUNT = 6
 def daysBetween(date1, date2):
     date1 = datetime.date(date1.year, date1.month, date1.day)
     return (date1-date2).days
@@ -25,12 +27,13 @@ class CommandHandler():
         self.beauticonsole = BeautiConsole()
         self.jobj = jobj
         self.creditLog = CreditLog()
-        self.credit = int(jobj.get("score"))
+        self.credit = float(jobj.get("score"))
         self.rootJobList = jobj.get("jobList")
         self.currentJobList = self.rootJobList
         self.activities = jobj.get("activities")
         self.currentJobName = "全部任务"
         self.sortedJob = []
+        self.dateNow = datetime.date.today()
         # this contains a pair (folderJson, folderName)
         self.folderInfoStack = []
         self.SortShopActivities()
@@ -122,7 +125,7 @@ class CommandHandler():
                     return 0
                 print("切换目录错误\n")
             elif(s[0] == 'touch' or s[0] == 't'):
-                if(len(s)>=2 and (s[1] == '-list' or s[1]=="-l")):
+                if(len(s)>=2 and (s[1] == 'list' or s[1]=="l")):
                     print("公共部分?")
                     commonPart = input()
                     jobdate = "2099-12-29"
@@ -141,7 +144,7 @@ class CommandHandler():
                     self.saveJson()
                     return 0
                 rootFlag = False
-                if(len(s)>=2 and s[1] == '-r'):
+                if(len(s)>=2 and s[1] == 'r'):
                     rootFlag = True
                 print("jobname?")
                 jobname = input()
@@ -162,7 +165,7 @@ class CommandHandler():
                 else:
                     self.currentJobList.append(newJob)
             elif(s[0] == 'finish' or s[0] == 'f'):
-                if((len(s)>=2 and s[1] == '-c') or len(s) == 1):
+                if((len(s)>=2 and s[1] == 'c') or len(s) == 1):
                     if(len(self.folderInfoStack) == 0):
                         self.beauticonsole.colorPrint("错误，不能在根目录完成全部任务", BeautiConsole.RED, -1)
                         return 0
@@ -200,7 +203,7 @@ class CommandHandler():
                 index = int(s[1])
                 job = self.currentJobList[index]
                 print('你确定要删除任务',end='')
-                self.beauticonsole.colorPrintln(job.get("jobName"),BeautiConsole.YELLOW,-1)
+                self.beauticonsole.colorPrint(job.get("jobName"),BeautiConsole.YELLOW,-1)
                 yStr = input()
                 if(yStr == 'y'):
                     self.currentJobList.pop(index)
@@ -226,7 +229,7 @@ class CommandHandler():
                     if(len(self.activities)>index):
                         print("你确定要删除活动",end='')
                         activityDel = self.activities.getString(index)
-                        self.beauticonsole.colorPrintln(self.activities.getString(index),BeautiConsole.YELLOW,-1)
+                        self.beauticonsole.colorPrint(self.activities.getString(index),BeautiConsole.YELLOW,-1)
                         yStr = input()
                         if(yStr == 'y'):
                             self.activities.pop(index)
@@ -238,6 +241,8 @@ class CommandHandler():
                     self.beauticonsole.colorPrint(str(self.credit),BeautiConsole.YELLOW,-1)
                     print("周卡张数",end="")
                     self.beauticonsole.colorPrint(str(zhoukacnt),BeautiConsole.YELLOW,-1)
+                    if(is_holiday(self.dateNow)):
+                        print("今天是活动日, 所有商品打"+str(HOLIDAY_DISCOUNT)+"折")
                     for i in range (0, len(self.activities)):
                         name = self.activities[i]
                         if(i%2 == 0):
@@ -251,13 +256,17 @@ class CommandHandler():
                     return 0
                 name = self.activities[index]
                 activity = name.split("#")
-                creditNeed = int(activity[1])
-                print("确定要花"+activity[1]+"来兑换"+activity[0]+"吗？(Y/N)")
+                creditNeed = float(activity[1])
+                if(is_holiday(self.dateNow)):
+                    creditNeed = creditNeed*(float(HOLIDAY_DISCOUNT)/10)
+                print("确定要花"+str(creditNeed)+"来兑换"+activity[0]+"吗？(Y/N)")
                 line = input()
                 if(line == 'y' or line == 'Y'):
                     self.credit -= creditNeed
                     if(activity[0] == '周卡购买'):
                         weekCard = self.jobj.get("weekCard")
+                        if(weekCard == None):
+                            weekCard = 0
                         weekCard+=1
                         self.jobj["weekCard"] = weekCard
                     print("成功")
