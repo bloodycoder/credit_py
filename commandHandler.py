@@ -6,6 +6,8 @@ import datetime
 import functools
 import json
 from chinese_calendar import is_workday, is_holiday
+from dropBox import dropBox
+import threading
 EXITCLIENT = 100
 WEEKCARD = 12
 WEEK = 7
@@ -17,6 +19,15 @@ HOLIDAY_DISCOUNT = 6
 def daysBetween(date1, date2):
     date1 = datetime.date(date1.year, date1.month, date1.day)
     return (date1-date2).days
+
+class uploadThread(threading.Thread):
+    def __init__(self, dropbox, comhand):
+        threading.Thread.__init__(self)
+        self.dropbox = dropbox
+        self.comhand = comhand
+    def run(self):
+        self.dropbox.upload_file("./credit.json", "/credit.json")
+        self.comhand.creditLog.uploadLog()
 class FolderInfo():
     def __init__(self, folderJSON, folderName, cdIndex):
         self.folderJSON = folderJSON
@@ -32,8 +43,10 @@ class CommandHandler():
         self.currentJobList = self.rootJobList
         self.activities = jobj.get("activities")
         self.currentJobName = "全部任务"
+        self.uploadThread = []
         self.sortedJob = []
         self.dateNow = datetime.date.today()
+        self.dropbox = dropBox()
         # this contains a pair (folderJson, folderName)
         self.folderInfoStack = []
         self.SortShopActivities()
@@ -70,18 +83,23 @@ class CommandHandler():
     
     def saveJson(self):
         self.jobj['score'] = self.credit
+        self.jobj['save_version'] = self.jobj['save_version']+1
         jsonStr = json.dumps(self.jobj, ensure_ascii=False)
         f = open("credit.json",'w')
         f.write(jsonStr)
         f.close()
+        mythread = uploadThread(self.dropbox, self)
+        self.uploadThread.append(mythread)
+        mythread.start()
 
     def parseStr(self, cmd):
         errcode = 0
-        self.saveJson()
         s = cmd.split(" ")
         if(len(s)>0):
             if(s[0] == 'quit' or s[0] == 'exit' or s[0] == 'q' or s[0] == 'e'):
                 self.saveJson()
+                for i in range(len(self.uploadThread)):
+                    self.uploadThread[i].join()
                 return EXITCLIENT
             elif(s[0] == 'log'):
                 if(len(s)>1):
@@ -164,6 +182,7 @@ class CommandHandler():
                     self.rootJobList.append(newJob)
                 else:
                     self.currentJobList.append(newJob)
+                self.saveJson()
             elif(s[0] == 'finish' or s[0] == 'f'):
                 if((len(s)>=2 and s[1] == 'c') or len(s) == 1):
                     if(len(self.folderInfoStack) == 0):
@@ -174,7 +193,7 @@ class CommandHandler():
                     yStr = input()
                     if(yStr == 'y'):
                         tmpInfo = self.folderInfoStack[-1]
-                        self.folderInfoStack = self.folderInfoStack[:len(self.folderInfoStack)-1]
+                        #self.folderInfoStack = self.folderInfoStack[:len(self.folderInfoStack)-1]
                         self.currentJobList = tmpInfo.folderJSON
                         self.currentJobName = tmpInfo.folderName
                         index = tmpInfo.cdIndex
@@ -182,6 +201,13 @@ class CommandHandler():
                         self.credit += job.get('jobCredit')
                         self.currentJobList.pop(index)
                         self.creditLog.info("完成任务"+job.get('jobName')+"获得分值"+str(job.get('jobCredit'))+",现有分值"+str(self.credit))
+                        if(len(self.currentJobList)>index):
+                            job = self.currentJobList[index]
+                            self.currentJobIndex = index
+                            self.currentJobName = job.get("jobName")
+                            self.currentJobList = job.get('subJob')
+                        else:
+                            self.folderInfoStack = self.folderInfoStack[:len(self.folderInfoStack)-1]
                         print('成功')
                 else:
                     index = int(s[1])

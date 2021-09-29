@@ -1,10 +1,8 @@
 import json
 from commandHandler import *
+from dropBox import dropBox
 def main():
-    f = open("./credit.json", 'r')
-    text = f.read()
-    jsonObj = json.loads(text)
-    f.close()
+    jsonObj = initCredit()
     comhan = CommandHandler(jsonObj) 
     comhan.prtJob(comhan.currentJobList, 0, NOLIMIT)
     while(True):
@@ -18,5 +16,27 @@ def main():
             print('Exit system.')
             break
 
+def initCredit():
+    mydrop = dropBox()
+    mydrop.checkIfOnline()
+    mydrop.download_files("/credit.json","./credit_dropbox.json")
+    f = open("./credit_dropbox.json", 'r')
+    text = f.read()
+    jsonObjDrop = json.loads(text)
+    f.close()
+    if(jsonObjDrop.get("save_version") == None):
+        jsonObjDrop["save_version"] = 0
+    f = open("./credit.json", 'r')
+    text = f.read()
+    jsonObjLocal = json.loads(text)
+    f.close()
+    if(jsonObjLocal.get("save_version") == None):
+        jsonObjLocal["save_version"] = 1
+    if(jsonObjLocal["save_version"]<jsonObjDrop["save_version"]):
+        print("use online version")
+        return jsonObjDrop
+    else:
+        print("use local version")
+        return jsonObjLocal
 if __name__ == "__main__":
 	main()

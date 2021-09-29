@@ -1,5 +1,6 @@
 import datetime
 import logging
+import dropBox
 class CreditLog():
     def __init__(self) -> None:
         self.dateNow = datetime.date.today()
@@ -11,6 +12,8 @@ class CreditLog():
             self.prevDateStr = str(self.dateNow.year)+'_'+str(self.dateNow.month-1)
         self.curLogFile = 'credit'+self.currentDateStr+'.log'
         self.prevLogFile = 'credit'+self.prevDateStr+'.log'
+        self.dropbox = dropBox.dropBox()
+        self.dropbox.download_files("/"+self.curLogFile,"./"+self.curLogFile)
         logging.basicConfig(level=logging.INFO, filename=self.curLogFile,format="%(levelname)s:%(asctime)s:%(message)s")
     def showLog(self, showPrev):
         if(showPrev):
@@ -37,3 +40,5 @@ class CreditLog():
         f.close()
     def info(self, msg):
         logging.info(msg)
+    def uploadLog(self):
+        self.dropbox.upload_file("./"+self.curLogFile,"/"+self.curLogFile)
