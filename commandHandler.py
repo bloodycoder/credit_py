@@ -8,6 +8,7 @@ import json
 from chinese_calendar import is_workday, is_holiday
 from dropBox import dropBox
 import threading
+from queue import Queue
 EXITCLIENT = 100
 WEEKCARD = 12
 WEEK = 7
@@ -16,10 +17,12 @@ MONTH = 30
 HALF_YEAR = 180
 YEAR = 365
 HOLIDAY_DISCOUNT = 6
+FIRSTFREE_DISCOUNT = 4
 def daysBetween(date1, date2):
     date1 = datetime.date(date1.year, date1.month, date1.day)
-    return (date1-date2).days
+    return abs((date1-date2).days)
 
+uploadThreadQueue = Queue()
 class uploadThread(threading.Thread):
     def __init__(self, dropbox, comhand):
         threading.Thread.__init__(self)
@@ -28,6 +31,8 @@ class uploadThread(threading.Thread):
     def run(self):
         self.dropbox.upload_file("./credit.json", "/credit.json")
         self.comhand.creditLog.uploadLog()
+        uploadThreadQueue.get()
+        uploadThreadQueue.task_done()
 class FolderInfo():
     def __init__(self, folderJSON, folderName, cdIndex):
         self.folderJSON = folderJSON
@@ -43,17 +48,24 @@ class CommandHandler():
         self.currentJobList = self.rootJobList
         self.activities = jobj.get("activities")
         self.currentJobName = "全部任务"
-        self.uploadThread = []
         self.sortedJob = []
         self.dateNow = datetime.date.today()
         self.dropbox = dropBox()
         # this contains a pair (folderJson, folderName)
         self.folderInfoStack = []
         self.SortShopActivities()
+    def isFirstFree(self):
+        dateStr = self.jobj.get("lastBuyDate")
+        if(dateStr == None):
+            dateStr = '2021-09-20'
+        dueDate = datetime.datetime.strptime(dateStr, '%Y-%m-%d')
+        dateNow = datetime.date.today()
+        daybetween = daysBetween(dueDate, dateNow)
+        return daybetween>=1
     def SortShopActivities(self):
         def compare_activities(x,y):
-            credit1 = int(x.split('#')[1])
-            credit2 = int(y.split('#')[1])
+            credit1 = int(x["name"].split('#')[1])
+            credit2 = int(y["name"].split('#')[1])
             return credit1-credit2
         self.activities.sort(key=functools.cmp_to_key(compare_activities))
     def prtJob(self, jobRoot, cengji, daylimit):
@@ -88,8 +100,8 @@ class CommandHandler():
         f = open("credit.json",'w')
         f.write(jsonStr)
         f.close()
-        mythread = uploadThread(self.dropbox, self)
-        self.uploadThread.append(mythread)
+        mythread = uploadThread(self.dropbox, self, )
+        uploadThreadQueue.put(mythread)
         mythread.start()
 
     def parseStr(self, cmd):
@@ -98,8 +110,7 @@ class CommandHandler():
         if(len(s)>0):
             if(s[0] == 'quit' or s[0] == 'exit' or s[0] == 'q' or s[0] == 'e'):
                 self.saveJson()
-                for i in range(len(self.uploadThread)):
-                    self.uploadThread[i].join()
+                uploadThreadQueue.join()
                 return EXITCLIENT
             elif(s[0] == 'log'):
                 if(len(s)>1):
@@ -162,8 +173,11 @@ class CommandHandler():
                     self.saveJson()
                     return 0
                 rootFlag = False
+                staticFlag = False # 静态工作
                 if(len(s)>=2 and s[1] == 'r'):
                     rootFlag = True
+                if(len(s)>=2 and s[1] == 's'):
+                    staticFlag = True
                 print("jobname?")
                 jobname = input()
                 if(len(jobname) == 0):
@@ -178,6 +192,8 @@ class CommandHandler():
                 if(len(credit) == 0):
                     credit = 0
                 newJob = getJobDict(jobname, int(credit), jobdate, [])
+                if(staticFlag == True):
+                    newJob["static"] = 1
                 if(rootFlag):
                     self.rootJobList.append(newJob)
                 else:
@@ -219,9 +235,10 @@ class CommandHandler():
                     yStr = input()
                     if(yStr == 'y'):
                         self.credit += job.get("jobCredit")
-                        self.currentJobList.pop(index)
                         self.beauticonsole.colorPrint("成功", BeautiConsole.RED, -1)
                         self.creditLog.info("完成任务"+job.get('jobName')+"获得分值"+str(job.get('jobCredit'))+",现有分值"+str(self.credit))
+                        if(job.get("static") == None or job.get("static") == 0):
+                            self.currentJobList.pop(index)
                     else:
                         return 0
                 self.saveJson()
@@ -246,7 +263,8 @@ class CommandHandler():
                     credit = input()
                     if(len(credit) == 0):
                         credit = "0"
-                    newActivity = acname + "#" + credit
+                    newActivity ={}
+                    newActivity["anme"] = acname + "#" + credit
                     self.activities.append(newActivity)
                     self.creditLog.info("新增活动"+acname+",价格"+str(credit)+",现有分值"+str(self.credit))
                     self.SortShopActivities()
@@ -254,8 +272,8 @@ class CommandHandler():
                     index = int(s[2])
                     if(len(self.activities)>index):
                         print("你确定要删除活动",end='')
-                        activityDel = self.activities.getString(index)
-                        self.beauticonsole.colorPrint(self.activities.getString(index),BeautiConsole.YELLOW,-1)
+                        activityDel = self.activities[index]["name"]
+                        self.beauticonsole.colorPrint(activityDel,BeautiConsole.YELLOW,-1)
                         yStr = input()
                         if(yStr == 'y'):
                             self.activities.pop(index)
@@ -269,8 +287,10 @@ class CommandHandler():
                     self.beauticonsole.colorPrint(str(zhoukacnt),BeautiConsole.YELLOW,-1)
                     if(is_holiday(self.dateNow)):
                         print("今天是活动日, 所有商品打"+str(HOLIDAY_DISCOUNT)+"折")
+                    if(self.isFirstFree()):
+                        self.beauticonsole.colorPrint("首次免费生效",BeautiConsole.RED, -1)
                     for i in range (0, len(self.activities)):
-                        name = self.activities[i]
+                        name = self.activities[i]["name"]
                         if(i%2 == 0):
                             self.beauticonsole.colorPrint(str(i)+","+name,BeautiConsole.PURPLE,-1)
                         else:
@@ -280,11 +300,13 @@ class CommandHandler():
                 if(index>=len(self.activities)):
                     print('err')
                     return 0
-                name = self.activities[index]
+                name = self.activities[index]["name"]
                 activity = name.split("#")
                 creditNeed = float(activity[1])
                 if(is_holiday(self.dateNow)):
                     creditNeed = creditNeed*(float(HOLIDAY_DISCOUNT)/10)
+                if(self.isFirstFree()):
+                    creditNeed = creditNeed*(float(FIRSTFREE_DISCOUNT)/10)
                 print("确定要花"+str(creditNeed)+"来兑换"+activity[0]+"吗？(Y/N)")
                 line = input()
                 if(line == 'y' or line == 'Y'):
@@ -295,6 +317,7 @@ class CommandHandler():
                             weekCard = 0
                         weekCard+=1
                         self.jobj["weekCard"] = weekCard
+                    self.jobj["lastBuyDate"] = str(self.dateNow.year)+'-'+str(self.dateNow.month)+'-'+str(self.dateNow.day)
                     print("成功")
                 self.saveJson()
                 self.creditLog.info("购买活动"+name+",现有分值"+str(self.credit))
