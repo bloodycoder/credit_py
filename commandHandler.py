@@ -73,6 +73,16 @@ class CommandHandler():
         for job in jobRoot:
             jobName = job.get("jobName")
             credit = job.get("jobCredit")
+            isStatic = job.get("static")
+            if(isStatic != None and isStatic != 0):
+                lastFinishDate = job.get("lastFinishDate")
+                repeatTime = job.get("repeatTime")
+                if(lastFinishDate != None and repeatTime!=None and repeatTime!=0):
+                    lastFinishDate = datetime.datetime.strptime(lastFinishDate, '%Y-%m-%d')
+                    daybetween = daysBetween(lastFinishDate, self.dateNow)
+                    if(daybetween<repeatTime):
+                        index+=1
+                        continue
             if(daylimit == NOLIMIT):
                 for i in range(0,cengji):
                     print("  ",end=''),
@@ -119,7 +129,7 @@ class CommandHandler():
                     self.creditLog.showLog(False)
             elif(s[0] == 'help'):
                 print("shop[-t | -r]:显示全部\nbuy:购买\nfinish:完成任务")
-                print("touch[-l | -r]")
+                print("touch[-l(-list)| -r(root)][-s(static)]")
                 print("log[-p]")
                 print('exit:离开')
             elif(s[0] == 'ls' or s[0] == 'l' or s[0] == 'll'):
@@ -194,6 +204,9 @@ class CommandHandler():
                 newJob = getJobDict(jobname, int(credit), jobdate, [])
                 if(staticFlag == True):
                     newJob["static"] = 1
+                    print("repleat time?int")
+                    repeatTime = int(input())
+                    newJob["repeatTime"] = repeatTime
                 if(rootFlag):
                     self.rootJobList.append(newJob)
                 else:
@@ -239,6 +252,8 @@ class CommandHandler():
                         self.creditLog.info("完成任务"+job.get('jobName')+"获得分值"+str(job.get('jobCredit'))+",现有分值"+str(self.credit))
                         if(job.get("static") == None or job.get("static") == 0):
                             self.currentJobList.pop(index)
+                        else:
+                            job["lastFinishDate"] = str(self.dateNow.year)+"-"+str(self.dateNow.month)+"-"+str(self.dateNow.day)
                     else:
                         return 0
                 self.saveJson()

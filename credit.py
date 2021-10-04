@@ -18,7 +18,6 @@ def main():
 
 def initCredit():
     mydrop = dropBox()
-    mydrop.checkIfOnline()
     mydrop.download_files("/credit.json","./credit_dropbox.json")
     f = open("./credit_dropbox.json", 'r')
     text = f.read()
