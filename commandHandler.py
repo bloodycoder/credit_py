@@ -68,9 +68,10 @@ class CommandHandler():
             credit2 = int(y["name"].split('#')[1])
             return credit1-credit2
         self.activities.sort(key=functools.cmp_to_key(compare_activities))
-    def prtJob(self, jobRoot, cengji, daylimit):
+    def prtJob(self, jobRoot, cengji, daylimit, accCengji:str):
         index = 0
-        for job in jobRoot:
+        for jobIndex in range(len(jobRoot)):
+            job = jobRoot[jobIndex]
             jobName = job.get("jobName")
             credit = job.get("jobCredit")
             isStatic = job.get("static")
@@ -83,13 +84,20 @@ class CommandHandler():
                     if(daybetween<repeatTime):
                         index+=1
                         continue
+            if(accCengji == ''):
+                accIndex = str(index)
+            else:
+                accIndex = accCengji+','+str(index)
             if(daylimit == NOLIMIT):
                 for i in range(0,cengji):
                     print("  ",end=''),
+                if(jobIndex>5 and cengji>=2):
+                    print("...")
+                    return
                 if(cengji%2 == 0):
-                    self.beauticonsole.colorPrint(str(index)+","+jobName+"#"+str(credit),BeautiConsole.RED, -1)
+                    self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.RED, -1)
                 else:
-                    self.beauticonsole.colorPrint(str(index)+","+jobName+"#"+str(credit),BeautiConsole.BLUE, -1)
+                    self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.BLUE, -1)
             else:
                 dateStr = job.get("dueDate")
                 dueDate = datetime.datetime.strptime(dateStr, '%Y-%m-%d')
@@ -100,7 +108,7 @@ class CommandHandler():
                 print(daybetween)
             subJob = job.get("subJob")
             if(subJob != None and len(subJob)>0):
-                self.prtJob(subJob, cengji+1, daylimit)
+                self.prtJob(subJob, cengji+1, daylimit, accIndex)
             index+=1
     
     def saveJson(self):
@@ -135,7 +143,7 @@ class CommandHandler():
             elif(s[0] == 'ls' or s[0] == 'l' or s[0] == 'll'):
                 self.beauticonsole.colorPrint(self.currentJobName,BeautiConsole.YELLOW,-1)
                 if(len(self.currentJobList)>0):
-                    self.prtJob(self.currentJobList, 0, NOLIMIT)
+                    self.prtJob(self.currentJobList, 0, NOLIMIT,'')
                 else:
                     print("暂时无任务\n")
             elif(s[0] == 'cd'):
@@ -152,17 +160,25 @@ class CommandHandler():
                     self.currentJobList = tmpInfo.folderJSON
                     self.currentJobName = tmpInfo.folderName
                     return 0
-                index = int(s[1])
-                if(index<len(self.currentJobList)):
-                    # can cd 1
-                    job = self.currentJobList[index]
-                    tmpInfo = FolderInfo(self.currentJobList, self.currentJobName, index)
-                    self.folderInfoStack.append(tmpInfo)
-                    self.currentJobIndex = index
-                    self.currentJobName = job.get("jobName")
-                    self.currentJobList = job.get('subJob')
-                    return 0
-                print("切换目录错误\n")
+                indexList = []
+                if(',' in s[1]):
+                    splited = s[1].split(',')
+                    for splitChar in splited:
+                        indexList.append(int(splitChar))
+                else:
+                    indexList.append(int(s[1]))
+                for index in indexList:
+                    if(index<len(self.currentJobList)):
+                        # can cd 1
+                        job = self.currentJobList[index]
+                        tmpInfo = FolderInfo(self.currentJobList, self.currentJobName, index)
+                        self.folderInfoStack.append(tmpInfo)
+                        self.currentJobIndex = index
+                        self.currentJobName = job.get("jobName")
+                        self.currentJobList = job.get('subJob')
+                    else:
+                        print("切换目录错误\n")
+                        return
             elif(s[0] == 'touch' or s[0] == 't'):
                 if(len(s)>=2 and (s[1] == 'list' or s[1]=="l")):
                     print("公共部分?")

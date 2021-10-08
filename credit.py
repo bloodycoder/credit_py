@@ -4,7 +4,7 @@ from dropBox import dropBox
 def main():
     jsonObj = initCredit()
     comhan = CommandHandler(jsonObj) 
-    comhan.prtJob(comhan.currentJobList, 0, NOLIMIT)
+    comhan.prtJob(comhan.currentJobList, 0, NOLIMIT,'')
     while(True):
         print('picard>',end="")
         cmd = input().lower()
