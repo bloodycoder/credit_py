@@ -279,7 +279,7 @@ class CommandHandler():
                     if(len(credit) == 0):
                         credit = "0"
                     newActivity ={}
-                    newActivity["anme"] = acname + "#" + credit
+                    newActivity["name"] = acname + "#" + credit
                     self.activities.append(newActivity)
                     self.creditLog.info("新增活动"+acname+",价格"+str(credit)+",现有分值"+str(self.credit))
                     self.SortShopActivities()
