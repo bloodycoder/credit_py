@@ -64,10 +64,18 @@ class CommandHandler():
         return daybetween>=1
     def SortShopActivities(self):
         def compare_activities(x,y):
-            credit1 = int(x["name"].split('#')[1])
-            credit2 = int(y["name"].split('#')[1])
-            return credit1-credit2
+            credit1 = float(x["name"].split('#')[1])
+            credit2 = float(y["name"].split('#')[1])
+            return int(credit1-credit2)
         self.activities.sort(key=functools.cmp_to_key(compare_activities))
+    def finishOneJobAndGetCredit(self, job):
+        self.credit += job.get('jobCredit')
+        subJob = job.get("subJob")
+        self.creditLog.info("完成任务"+job.get('jobName')+"获得分值"+str(job.get('jobCredit'))+",现有分值"+str(self.credit))
+        if(subJob != None and len(subJob)>0):
+            for jobIndex in range(len(subJob)):
+                tmpjob = subJob[jobIndex]
+                self.finishOneJobAndGetCredit(tmpjob)
     def prtJob(self, jobRoot, cengji, daylimit, accCengji:str):
         index = 0
         for jobIndex in range(len(jobRoot)):
@@ -91,7 +99,7 @@ class CommandHandler():
             if(daylimit == NOLIMIT):
                 for i in range(0,cengji):
                     print("  ",end=''),
-                if(jobIndex>5 and cengji>=2):
+                if(jobIndex>=1 and cengji>=2):
                     print("...")
                     return
                 if(cengji%2 == 0):
@@ -243,9 +251,9 @@ class CommandHandler():
                         self.currentJobName = tmpInfo.folderName
                         index = tmpInfo.cdIndex
                         job = self.currentJobList[index]
-                        self.credit += job.get('jobCredit')
-                        self.currentJobList.pop(index)
-                        self.creditLog.info("完成任务"+job.get('jobName')+"获得分值"+str(job.get('jobCredit'))+",现有分值"+str(self.credit))
+                        if(job.get("static") == None or job.get("static") == 0):
+                            self.currentJobList.pop(index)
+                        self.finishOneJobAndGetCredit(job)
                         if(len(self.currentJobList)>index):
                             job = self.currentJobList[index]
                             self.currentJobIndex = index
@@ -263,9 +271,8 @@ class CommandHandler():
                     self.beauticonsole.colorPrint(job['jobName'], BeautiConsole.YELLOW, -1)
                     yStr = input()
                     if(yStr == 'y'):
-                        self.credit += job.get("jobCredit")
+                        self.finishOneJobAndGetCredit(job)
                         self.beauticonsole.colorPrint("成功", BeautiConsole.RED, -1)
-                        self.creditLog.info("完成任务"+job.get('jobName')+"获得分值"+str(job.get('jobCredit'))+",现有分值"+str(self.credit))
                         if(job.get("static") == None or job.get("static") == 0):
                             self.currentJobList.pop(index)
                         else:
