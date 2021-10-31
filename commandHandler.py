@@ -1,5 +1,6 @@
 from logging import root
-from os import rmdir
+import os
+import platform
 from beautiConsole import BeautiConsole
 from log import CreditLog
 import datetime
@@ -9,6 +10,7 @@ from chinese_calendar import is_workday, is_holiday
 from dropBox import dropBox
 import threading
 from queue import Queue
+import time
 EXITCLIENT = 100
 WEEKCARD = 12
 WEEK = 7
@@ -54,6 +56,7 @@ class CommandHandler():
         # this contains a pair (folderJson, folderName)
         self.folderInfoStack = []
         self.SortShopActivities()
+        self.SortJob()
     def isFirstFree(self):
         dateStr = self.jobj.get("lastBuyDate")
         if(dateStr == None):
@@ -68,6 +71,17 @@ class CommandHandler():
             credit2 = float(y["name"].split('#')[1])
             return int(credit1-credit2)
         self.activities.sort(key=functools.cmp_to_key(compare_activities))
+    def SortJob(self):
+        self.rootJobList
+        def compare_job(x,y):
+            credit1 = x.get("latestDoTime")
+            if(credit1 == None):
+                credit1 = 0
+            credit2 = y.get("latestDoTime")
+            if(credit2 == None):
+                credit2 = 0 
+            return int(credit2-credit1)
+        self.rootJobList.sort(key = functools.cmp_to_key(compare_job))
     def finishOneJobAndGetCredit(self, job):
         self.credit += job.get('jobCredit')
         subJob = job.get("subJob")
@@ -129,7 +143,11 @@ class CommandHandler():
         mythread = uploadThread(self.dropbox, self, )
         uploadThreadQueue.put(mythread)
         mythread.start()
-
+    def updateTime(self):
+        if(len(self.folderInfoStack)>0):
+            topJob = self.folderInfoStack[0].folderJSON
+            subJob = topJob[self.folderInfoStack[0].cdIndex]
+            subJob["latestDoTime"] = int(time.time())
     def parseStr(self, cmd):
         errcode = 0
         s = cmd.split(" ")
@@ -139,6 +157,10 @@ class CommandHandler():
                 uploadThreadQueue.join()
                 return EXITCLIENT
             elif(s[0] == 'log'):
+                # open folder is enough
+                if(platform.system() == 'Windows'):
+                    pwd = os.getcwd()
+                    os.system('start explorer '+ pwd)
                 if(len(s)>1):
                     self.creditLog.showLog(True)
                 else:
@@ -149,6 +171,7 @@ class CommandHandler():
                 print("log[-p]")
                 print('exit:离开')
             elif(s[0] == 'ls' or s[0] == 'l' or s[0] == 'll'):
+                self.SortJob()
                 self.beauticonsole.colorPrint(self.currentJobName,BeautiConsole.YELLOW,-1)
                 if(len(self.currentJobList)>0):
                     self.prtJob(self.currentJobList, 0, NOLIMIT,'')
@@ -245,6 +268,7 @@ class CommandHandler():
                     self.beauticonsole.colorPrint(self.currentJobName, BeautiConsole.YELLOW, -1)
                     yStr = input()
                     if(yStr == 'y'):
+                        self.updateTime()
                         tmpInfo = self.folderInfoStack[-1]
                         #self.folderInfoStack = self.folderInfoStack[:len(self.folderInfoStack)-1]
                         self.currentJobList = tmpInfo.folderJSON
@@ -253,6 +277,8 @@ class CommandHandler():
                         job = self.currentJobList[index]
                         if(job.get("static") == None or job.get("static") == 0):
                             self.currentJobList.pop(index)
+                        else:
+                            job["lastFinishDate"] = str(self.dateNow.year)+"-"+str(self.dateNow.month)+"-"+str(self.dateNow.day)
                         self.finishOneJobAndGetCredit(job)
                         if(len(self.currentJobList)>index):
                             job = self.currentJobList[index]
@@ -271,6 +297,7 @@ class CommandHandler():
                     self.beauticonsole.colorPrint(job['jobName'], BeautiConsole.YELLOW, -1)
                     yStr = input()
                     if(yStr == 'y'):
+                        self.updateTime()
                         self.finishOneJobAndGetCredit(job)
                         self.beauticonsole.colorPrint("成功", BeautiConsole.RED, -1)
                         if(job.get("static") == None or job.get("static") == 0):
