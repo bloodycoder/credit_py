@@ -25,7 +25,7 @@ def initCredit():
     f.close()
     if(jsonObjDrop.get("save_version") == None):
         jsonObjDrop["save_version"] = 0
-    f = open("./credit.json", 'r')
+    f = open("./credit.json", 'r',encoding='UTF-8')
     text = f.read()
     jsonObjLocal = json.loads(text)
     f.close()

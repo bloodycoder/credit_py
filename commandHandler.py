@@ -117,7 +117,7 @@ class CommandHandler():
                     print("...")
                     return
                 if(cengji%2 == 0):
-                    self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.RED, -1)
+                    self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.WHITE, -1)
                 else:
                     self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.BLUE, -1)
             else:
@@ -137,7 +137,7 @@ class CommandHandler():
         self.jobj['score'] = self.credit
         self.jobj['save_version'] = self.jobj['save_version']+1
         jsonStr = json.dumps(self.jobj, ensure_ascii=False)
-        f = open("credit.json",'w')
+        f = open("credit.json",'w',encoding='UTF-8')
         f.write(jsonStr)
         f.close()
         mythread = uploadThread(self.dropbox, self, )

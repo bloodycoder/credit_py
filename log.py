@@ -14,7 +14,14 @@ class CreditLog():
         self.prevLogFile = 'credit'+self.prevDateStr+'.log'
         self.dropbox = dropBox.dropBox()
         self.dropbox.download_files("/"+self.curLogFile,"./"+self.curLogFile)
-        logging.basicConfig(level=logging.INFO, filename=self.curLogFile,format="%(levelname)s:%(asctime)s:%(message)s")
+        #logging.basicConfig(level=logging.INFO, filename=self.curLogFile,format="%(levelname)s:%(asctime)s:%(message)s")
+
+        fh = logging.FileHandler(self.curLogFile, mode = 'a', encoding='utf-8', delay=False)
+        fh.setLevel(logging.INFO)
+        fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        self.logger = logging.getLogger()
+        self.logger.addHandler(fh)
+        self.logger.setLevel(logging.INFO)
     def showLog(self, showPrev):
         if(showPrev):
             try:
@@ -39,6 +46,6 @@ class CreditLog():
                 print(text[i])
         f.close()
     def info(self, msg):
-        logging.info(msg)
+        self.logger.info(msg)
     def uploadLog(self):
         self.dropbox.upload_file("./"+self.curLogFile,"/"+self.curLogFile)
