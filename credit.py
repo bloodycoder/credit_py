@@ -19,7 +19,7 @@ def main():
 def initCredit():
     mydrop = dropBox()
     mydrop.download_files("/credit.json","./credit_dropbox.json")
-    f = open("./credit_dropbox.json", 'r')
+    f = open("./credit_dropbox.json", 'r',encoding='utf-8')
     text = f.read()
     jsonObjDrop = json.loads(text)
     f.close()

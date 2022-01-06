@@ -350,8 +350,6 @@ class CommandHandler():
                     self.beauticonsole.colorPrint(str(self.credit),BeautiConsole.YELLOW,-1)
                     print("周卡张数",end="")
                     self.beauticonsole.colorPrint(str(zhoukacnt),BeautiConsole.YELLOW,-1)
-                    if(is_holiday(self.dateNow)):
-                        print("今天是活动日, 所有商品打"+str(HOLIDAY_DISCOUNT)+"折")
                     if(self.isFirstFree()):
                         self.beauticonsole.colorPrint("首次免费生效",BeautiConsole.RED, -1)
                     for i in range (0, len(self.activities)):
@@ -368,8 +366,6 @@ class CommandHandler():
                 name = self.activities[index]["name"]
                 activity = name.split("#")
                 creditNeed = float(activity[1])
-                if(is_holiday(self.dateNow)):
-                    creditNeed = creditNeed*(float(HOLIDAY_DISCOUNT)/10)
                 if(self.isFirstFree()):
                     creditNeed = creditNeed*(float(FIRSTFREE_DISCOUNT)/10)
                 print("确定要花"+str(creditNeed)+"来兑换"+activity[0]+"吗？(Y/N)")

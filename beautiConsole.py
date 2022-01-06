@@ -64,7 +64,10 @@ class BeautiConsole():
             bgColor +=40
             print("\033["+str(bgColor)+";"+str(fontColor)+";4m"+words+"\033[0m")
         """
-        self.echo(fontColor, words)
+        if sys.platform[:3] == 'win':
+            self.echo(fontColor, words)
+        else:
+            print("\033["+str(fontColor)+";4m"+words+"\033[0m")
 
 if __name__ == "__main__":
     mysb = BeautiConsole() 

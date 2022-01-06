@@ -16,7 +16,7 @@ class CreditLog():
         self.dropbox.download_files("/"+self.curLogFile,"./"+self.curLogFile)
         #logging.basicConfig(level=logging.INFO, filename=self.curLogFile,format="%(levelname)s:%(asctime)s:%(message)s")
 
-        fh = logging.FileHandler(self.curLogFile, mode = 'a', encoding='utf-8', delay=False)
+        fh = logging.FileHandler(self.curLogFile, mode = 'a', encoding='UTF-8', delay=False)
         fh.setLevel(logging.INFO)
         fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
         self.logger = logging.getLogger()
@@ -25,7 +25,7 @@ class CreditLog():
     def showLog(self, showPrev):
         if(showPrev):
             try:
-                f = open(self.prevLogFile, 'r')
+                f = open(self.prevLogFile, 'r', encoding='UTF-8')
                 text = f.readlines()
                 if(len(text)<100):
                     for i in range(len(text)):
@@ -36,7 +36,7 @@ class CreditLog():
                 f.close()
             except FileNotFoundError:
                 print("file not found")
-        f = open(self.curLogFile, 'r')
+        f = open(self.curLogFile, 'r', encoding='UTF-8')
         text = f.readlines()
         if(len(text)<100):
             for i in range(len(text)):

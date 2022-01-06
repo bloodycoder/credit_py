@@ -38,9 +38,11 @@ class dropBox:
             "Authorization": self.longtermToken,
             "Dropbox-API-Arg": '{"path":"%s"}' % src_path
         }
-        with open(dst_path, 'w') as f:
+        with open(dst_path, 'w',encoding='utf-8') as f:
             r = requests.post(download_url, headers=headers, proxies=self.proxies)
             if(r.status_code != 200):
                 print("dropbox download file %s err. please check" % src_path)
             else:
-                f.write(r.text.replace('\n', ''))
+                content = r.content
+                text = str(content, 'utf-8')
+                f.write(text.replace('\n',''))
