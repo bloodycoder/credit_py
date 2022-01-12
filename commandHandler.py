@@ -90,6 +90,7 @@ class CommandHandler():
             for jobIndex in range(len(subJob)):
                 tmpjob = subJob[jobIndex]
                 self.finishOneJobAndGetCredit(tmpjob)
+            job["subJob"] = []
     def prtJob(self, jobRoot, cengji, daylimit, accCengji:str):
         index = 0
         for jobIndex in range(len(jobRoot)):

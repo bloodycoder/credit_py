@@ -1,15 +1,21 @@
 import requests
 import config
 import os
+import platform 
 class dropBox:
     def __init__(self):
         proxy = '127.0.0.1:7890'
-        self.proxies = {"http": 'socks5://'+proxy,"https": 'socks5://'+proxy,}
+        platform_name = platform.platform()[:10]
+        if(platform_name == 'Linux-4.19'):
+            #my mobilephone
+            self.proxies = {}
+        else:
+            self.proxies = {"http": 'http://'+proxy,"https": 'http://'+proxy,}
+            for k in list(os.environ.keys()):
+                if k.lower().endswith('_proxy'):
+                    del os.environ[k]
         self.longtermToken = 'Bearer '+ config.DropBoxToken
         requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:ECDHE:!COMPLEMENTOFDEFAULT"
-        for k in list(os.environ.keys()):
-            if k.lower().endswith('_proxy'):
-                del os.environ[k]
     def checkIfOnline(self):
         session = requests.Session()
         session.headers = {"Authorization": self.longtermToken,
@@ -46,3 +52,13 @@ class dropBox:
                 content = r.content
                 text = str(content, 'utf-8')
                 f.write(text.replace('\n',''))
+
+def func():
+    myproxy = '127.0.0.1:7890'
+    #new_proxies = {"http": 'socks5://'+myproxy,"https": 'socks5://'+myproxy,}
+    new_proxies = {"http": 'http://'+myproxy,"https": 'http://'+myproxy,}
+    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:ECDHE:!COMPLEMENTOFDEFAULT"
+    resp = requests.get('https://www.google.com/',proxies=new_proxies)
+    print(resp.text)
+if __name__ == "__main__":
+    func()
