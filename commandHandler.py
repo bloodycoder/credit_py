@@ -57,6 +57,7 @@ class CommandHandler():
         self.folderInfoStack = []
         self.SortShopActivities()
         self.SortJob()
+        self.writeMd()
     def isFirstFree(self):
         dateStr = self.jobj.get("lastBuyDate")
         if(dateStr == None):
@@ -91,8 +92,52 @@ class CommandHandler():
                 tmpjob = subJob[jobIndex]
                 self.finishOneJobAndGetCredit(tmpjob)
             job["subJob"] = []
+    def writeMd(self):
+        if(platform.system() == 'Windows'):
+            if(not os.path.exists("./markdown")):
+                os.makedirs("./markdown")
+            filename = "./markdown/"+str(self.dateNow.year)+"-"+str(self.dateNow.month)+"-"+str(self.dateNow.day)+'.md'
+            if(os.path.exists(filename)):
+                print('file exist')
+                return
+            newlist=[]
+            self.prtJobToMd(self.currentJobList, 0, newlist)
+            f = open(filename,'w',encoding='UTF-8')
+            f.write(''.join(newlist))
+            f.close()
+        #print(newlist)
+    def prtJobToMd(self, jobRoot, cengji, newlist:list):
+        index = 0
+        realIndex = 0 # different from index. this is real index apart from static
+        for jobIndex in range(len(jobRoot)):
+            job = jobRoot[jobIndex]
+            jobName = job.get("jobName")
+            credit = job.get("jobCredit")
+            isStatic = job.get("static")
+            if(isStatic != None and isStatic != 0):
+                lastFinishDate = job.get("lastFinishDate")
+                repeatTime = job.get("repeatTime")
+                if(lastFinishDate != None and repeatTime!=None and repeatTime!=0):
+                    lastFinishDate = datetime.datetime.strptime(lastFinishDate, '%Y-%m-%d')
+                    daybetween = daysBetween(lastFinishDate, self.dateNow)
+                    if(daybetween<repeatTime):
+                        index+=1
+                        continue
+
+            for i in range(0,cengji):
+                newlist.append("  ")
+            if(jobIndex>=10 and cengji>=3):
+                newlist.append("...\n")
+                return
+            realIndex += 1
+            newlist.append("- [ ] " + jobName+'\n')
+            subJob = job.get("subJob")
+            if(subJob != None and len(subJob)>0):
+                self.prtJobToMd(subJob, cengji+1, newlist)
+            index+=1    
     def prtJob(self, jobRoot, cengji, daylimit, accCengji:str):
         index = 0
+        realIndex = 0 # different from index. this is real index apart from static
         for jobIndex in range(len(jobRoot)):
             job = jobRoot[jobIndex]
             jobName = job.get("jobName")
@@ -117,17 +162,20 @@ class CommandHandler():
                 if(jobIndex>=1 and cengji>=2):
                     print("...")
                     return
+                realIndex += 1
                 if(cengji%2 == 0):
                     self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.WHITE, -1)
                 else:
-                    self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.BLUE, -1)
+                    if(realIndex % 2 == 0):
+                        self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.GREY, -1)
+                    else:
+                        self.beauticonsole.colorPrint(accIndex+"."+jobName+"#"+str(credit),BeautiConsole.PURPLE, -1)
             else:
                 dateStr = job.get("dueDate")
                 dueDate = datetime.datetime.strptime(dateStr, '%Y-%m-%d')
                 dateNow = datetime.date.today()
                 daybetween = daysBetween(dueDate, dateNow)
                 # i dont think this is useful
-
                 print(daybetween)
             subJob = job.get("subJob")
             if(subJob != None and len(subJob)>0):
