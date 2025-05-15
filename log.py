@@ -14,7 +14,7 @@ class CreditLog():
         self.prevLogFile = 'credit'+self.prevDateStr+'.log'
         self.dropbox = dropBox.dropBox()
         self.dropbox.download_files("/"+self.curLogFile,"./log/"+self.curLogFile)
-        #logging.basicConfig(level=logging.INFO, filename=self.curLogFile,format="%(levelname)s:%(asctime)s:%(message)s")
+        #logging.basicConfig(level=logging.INFO, filename=self.curLogFile,format="%(levelname)s:%(asctime)s:%(message)s\n")
 
         fh = logging.FileHandler("./log/"+self.curLogFile, mode = 'a', encoding='UTF-8', delay=False)
         fh.setLevel(logging.INFO)
